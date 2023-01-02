@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:pdfx/pdfx.dart';
 
 AndroidOptions _getAndroidOptions() => const AndroidOptions(
       encryptedSharedPreferences: true,
@@ -35,17 +36,33 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String? _filePath;
+  Image? image;
 
-  void checkIfAlreadySelected() async {
+  Future<void> pdfToImage() async {
+    String path = _filePath!;
+    final document = await PdfDocument.openFile(path);
+    final page = await document.getPage(1);
+    final pageImage = await page.render(
+      width: page.width,
+      height: page.height,
+      format: PdfPageImageFormat.jpeg,
+    );
+    setState(() {
+      image = Image.memory(pageImage!.bytes);
+    });
+  }
+
+  Future<void> checkIfAlreadySelected() async {
     String? result = await storage.read(key: 'filepath');
     if (result != null) {
       setState(() {
         _filePath = result;
       });
+      pdfToImage();
     }
   }
 
-  void pickPdfFile() async {
+  Future<void> pickPdfFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf'],
@@ -55,13 +72,13 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _filePath = result.files.single.path;
       });
+      pdfToImage();
       await storage.deleteAll();
       storage.write(key: 'filepath', value: _filePath);
     } else {
       print("No File Selected!");
     }
   }
-
 
   @override
   void initState() {

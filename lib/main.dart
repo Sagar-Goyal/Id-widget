@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pdfx/pdfx.dart';
+import 'package:r_scan/r_scan.dart';
 
 AndroidOptions _getAndroidOptions() => const AndroidOptions(
       encryptedSharedPreferences: true,
@@ -36,9 +37,10 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String? _filePath;
-  Image? image;
+  String? _qrMessage;
+  bool showLoadingIndicator = true;
 
-  Future<void> pdfToImage() async {
+  Future<void> getQrDetails() async {
     String path = _filePath!;
     final document = await PdfDocument.openFile(path);
     final page = await document.getPage(1);
@@ -47,18 +49,21 @@ class _HomePageState extends State<HomePage> {
       height: page.height,
       format: PdfPageImageFormat.jpeg,
     );
+    final result = await RScan.scanImageMemory(pageImage!.bytes);
     setState(() {
-      image = Image.memory(pageImage!.bytes);
+      _qrMessage = result.message;
     });
+    storage.write(key: 'qrMessage', value: _qrMessage);
   }
 
   Future<void> checkIfAlreadySelected() async {
-    String? result = await storage.read(key: 'filepath');
-    if (result != null) {
+    String? filePathResult = await storage.read(key: 'filepath');
+    String? qrMessageResult = await storage.read(key: 'qrMessage');
+    if (filePathResult != null) {
       setState(() {
-        _filePath = result;
+        _filePath = filePathResult;
+        _qrMessage = qrMessageResult;
       });
-      pdfToImage();
     }
   }
 
@@ -72,11 +77,9 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _filePath = result.files.single.path;
       });
-      pdfToImage();
       await storage.deleteAll();
+      getQrDetails();
       storage.write(key: 'filepath', value: _filePath);
-    } else {
-      print("No File Selected!");
     }
   }
 

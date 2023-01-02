@@ -36,6 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.2
   pdfx: ^2.3.0
   r_scan: ^0.1.6+1
+  loading_indicator: ^3.1.0
+  home_widget: ^0.1.6
 
 dev_dependencies:
   flutter_test:
